@@ -7,6 +7,7 @@
 /tmp
 /config/cudos*data/
 /config/*.toml
+/config/*.pid
 /config/*.mnemonic
 /config/*.env
 /config/*.address
