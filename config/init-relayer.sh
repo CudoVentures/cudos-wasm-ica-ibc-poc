@@ -45,5 +45,7 @@ hermes --config "${CONFIG_FILE}" create channel \
 # start node as daemon (in background)
 echo "Starting Hermes relayer"
 sleep 5
-hermes --config "${CONFIG_FILE}" start &> /dev/null & 
+hermes --config "${CONFIG_FILE}" start &> /dev/null &
+HERMES_PID=$!
+echo $HERMES_PID > hermes.pid
 echo "Hermes relayer started in background"
