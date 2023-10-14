@@ -6,6 +6,10 @@ set +a
 
 cargo install ibc-relayer-cli --version 1.6.0 --bin hermes --locked
 
+SED_IN_PLACE="sed -i"
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    SED_IN_PLACE="sed -i ''"
+fi
 CONFIG_FILE="./relayer-config.toml"
 MNEMONIC_FILE_0="./chain-a.mnemonic"
 MNEMONIC_FILE_1="./chain-b.mnemonic"
@@ -13,18 +17,18 @@ ICA_VERSION="{\"version\":\"ics27-1\",\"controller_connection_id\":\"connection-
 
 echo "Setting up relayer-config.toml"
 # chain 1 settings
-sed -i '' "1,/id = ''/ s/id = ''/id = '${CHAIN_ID_0}'/g" $CONFIG_FILE
-sed -i '' "1,/rpc_addr = ''/ s#rpc_addr = ''#rpc_addr = '${RPC_ADDR_0}'#g" $CONFIG_FILE
-sed -i '' "1,/grpc_addr = ''/ s#grpc_addr = ''#grpc_addr = '${GRPC_ADDR_0}'#g" $CONFIG_FILE
-sed -i '' "1,/event_source = ''/ s#event_source = ''#event_source = { mode = 'push', url = '${WEBSOCKET_ADDR_0}', batch_delay = '500ms' }#g" $CONFIG_FILE
-sed -i '' "1,/key_name = ''/ s/key_name = ''/key_name = '${CHAIN_ID_0}_key'/g" $CONFIG_FILE
+$SED_IN_PLACE "1,/id = ''/ s/id = ''/id = '${CHAIN_ID_0}'/g" $CONFIG_FILE
+$SED_IN_PLACE "1,/rpc_addr = ''/ s#rpc_addr = ''#rpc_addr = '${RPC_ADDR_0}'#g" $CONFIG_FILE
+$SED_IN_PLACE "1,/grpc_addr = ''/ s#grpc_addr = ''#grpc_addr = '${GRPC_ADDR_0}'#g" $CONFIG_FILE
+$SED_IN_PLACE "1,/event_source = ''/ s#event_source = ''#event_source = { mode = 'push', url = '${WEBSOCKET_ADDR_0}', batch_delay = '500ms' }#g" $CONFIG_FILE
+$SED_IN_PLACE "1,/key_name = ''/ s/key_name = ''/key_name = '${CHAIN_ID_0}_key'/g" $CONFIG_FILE
 
 # chain 2 settings
-sed -i '' "2,/id = ''/ s/id = ''/id = '${CHAIN_ID_1}'/g" $CONFIG_FILE
-sed -i '' "2,/rpc_addr = ''/ s#rpc_addr = ''#rpc_addr = '${RPC_ADDR_1}'#g" $CONFIG_FILE
-sed -i '' "2,/grpc_addr = ''/ s#grpc_addr = ''#grpc_addr = '${GRPC_ADDR_1}'#g" $CONFIG_FILE
-sed -i '' "2,/event_source = ''/ s#event_source = ''#event_source = { mode = 'push', url = '${WEBSOCKET_ADDR_1}', batch_delay = '500ms' }#g" $CONFIG_FILE
-sed -i '' "2,/key_name = ''/ s/key_name = ''/key_name = '${CHAIN_ID_1}_key'/g" $CONFIG_FILE
+$SED_IN_PLACE "2,/id = ''/ s/id = ''/id = '${CHAIN_ID_1}'/g" $CONFIG_FILE
+$SED_IN_PLACE "2,/rpc_addr = ''/ s#rpc_addr = ''#rpc_addr = '${RPC_ADDR_1}'#g" $CONFIG_FILE
+$SED_IN_PLACE "2,/grpc_addr = ''/ s#grpc_addr = ''#grpc_addr = '${GRPC_ADDR_1}'#g" $CONFIG_FILE
+$SED_IN_PLACE "2,/event_source = ''/ s#event_source = ''#event_source = { mode = 'push', url = '${WEBSOCKET_ADDR_1}', batch_delay = '500ms' }#g" $CONFIG_FILE
+$SED_IN_PLACE "2,/key_name = ''/ s/key_name = ''/key_name = '${CHAIN_ID_1}_key'/g" $CONFIG_FILE
 
 echo "Setting up relayer wallets for each chain"
 hermes --config "${CONFIG_FILE}" keys add --key-name "${CHAIN_ID_0}_key" --chain "${CHAIN_ID_0}" --mnemonic-file "${MNEMONIC_FILE_0}" --overwrite

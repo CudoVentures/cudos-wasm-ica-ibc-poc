@@ -1,16 +1,21 @@
 This is a POC to demonstrate the usage of a single CosmWasm contract to create an ICA address on a remote host chain over IBC and execute a TX on the targeted chain. The interesting part is that the target chain might not have Wasm module at all, as the contract that we are using communicates directly with the ICA module of the target chain.
 
-## Pre-requisites
-    Rust 1.70
-    Go 1.20
-    Docker
-
-
 ## USAGE
 1. No additinal ENV set up is required, so just navigate to project root and do:
 
+## Pre-requisites to run locally
+    Rust 1.70
+    Go 1.20
+    Docker
 ```sh 
-$ chmod +x ./run.sh && ./run.sh
+$ chmod +x ./run_local.sh && ./run_local.sh
+```
+
+## Pre-requisites to run in Docker container (might take longer to execute)
+    Rust 1.7 / in order to compile contract locally and avoid DinD
+    Docker
+```sh 
+$ chmod +x ./run_docker.sh && ./run_docker.sh
 ```
 
 The flow of the script is:

@@ -1,6 +1,10 @@
 #!/bin/bash -e
 
 # ENV
+SED_IN_PLACE="sed -i"
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    SED_IN_PLACE="sed -i ''"
+fi
 SETUP_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 CONFIG_DIR=$SETUP_DIR/config
 AVG_BLOCK_TIME=8
@@ -48,13 +52,6 @@ CONTRACT_ICA_BANK_SEND_TX() {
     echo "{\"ica_bank_send\": {\"amount\": \"$amount\", \"denom\": \"$denom\", \"to_address\":\"$to_address\"}}"
 }
 
-# COMPILE CONTRACT
-cargo clean && cargo build
-docker run --rm -v "$(pwd)":/code \
-  --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
-  --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  cosmwasm/rust-optimizer:0.12.13
-
 # CLEAN UP from previous run
 rm -rf $ROOT_INSTALL_PATH
 rm -rf $RELAYER_ENV
@@ -78,7 +75,7 @@ CHAIN_A_RPC_PORT="26657"
 CHAIN_A_ID="a-chain"
 CHAIN_A_HOME=$NODE_INSTALL_PATH/cudos-${CHAIN_A_ID}-data
 CHAIN_A_NODE="http://localhost:$CHAIN_A_RPC_PORT"
-lsof -i :$CHAIN_A_RPC_PORT| grep LISTEN | awk '{print $2}' | xargs kill -9
+lsof -i :$CHAIN_A_RPC_PORT | grep LISTEN | awk '{print $2}' | xargs -r kill -9
 ./init-chain.sh $CHAIN_A_ID $CHAIN_A_RPC_PORT
 cp -r $CHAIN_A_HOME/test-admin.wallet $CONFIG_DIR/chain-a.mnemonic
 
@@ -87,7 +84,7 @@ CHAIN_B_RPC_PORT="26654"
 CHAIN_B_ID="b-chain"
 CHAIN_B_HOME=$NODE_INSTALL_PATH/cudos-${CHAIN_B_ID}-data
 CHAIN_B_NODE="http://localhost:$CHAIN_B_RPC_PORT"
-lsof -i :$CHAIN_B_RPC_PORT| grep LISTEN | awk '{print $2}' | xargs kill -9
+lsof -i :$CHAIN_A_RPC_PORT | grep LISTEN | awk '{print $2}' | xargs -r kill -9
 ./init-chain.sh $CHAIN_B_ID $CHAIN_B_RPC_PORT
 cp -r $CHAIN_B_HOME/test-admin.wallet $CONFIG_DIR/chain-b.mnemonic
 
@@ -128,9 +125,9 @@ result=($(echo "$(cudos-noded q wasm list-contracts-by-creator \
     --node=$CHAIN_A_NODE)" | tr ',' '\n'))
 CONTRACT_ADDRESS=$(echo "${result[2]}")
 CHAIN_A_RELAYER_PORT=$(echo "wasm.${CONTRACT_ADDRESS}")
-sed -i '' 's|CHAIN_ID_0=""|CHAIN_ID_0='\""${CHAIN_A_ID}\""'|g' $RELAYER_ENV
-sed -i '' 's|CHAIN_0_PORT_ADDR=""|CHAIN_0_PORT_ADDR='\""${CHAIN_A_RELAYER_PORT}\""'|g' $RELAYER_ENV
-sed -i '' 's|CHAIN_ID_1=""|CHAIN_ID_1='\""${CHAIN_B_ID}\""'|g' $RELAYER_ENV
+$SED_IN_PLACE 's|CHAIN_ID_0=""|CHAIN_ID_0='\""${CHAIN_A_ID}\""'|g' $RELAYER_ENV
+$SED_IN_PLACE 's|CHAIN_0_PORT_ADDR=""|CHAIN_0_PORT_ADDR='\""${CHAIN_A_RELAYER_PORT}\""'|g' $RELAYER_ENV
+$SED_IN_PLACE 's|CHAIN_ID_1=""|CHAIN_ID_1='\""${CHAIN_B_ID}\""'|g' $RELAYER_ENV
 
 cd $CONFIG_DIR
 chmod +x ./init-relayer.sh
@@ -212,9 +209,9 @@ while [[ $RETRIES -lt $MAX_RETRIES && $SUCCESS == false ]]; do
         info "Relayer restarted"
         RETRIES=$((RETRIES + 1))
     else
-        loading "SUCCESS" 0
         echo "$NEW_ACCOUNT_NAME:$NEW_ACCOUNT_ADDR updated balances on: $CHAIN_B_ID"
-        echo "$balance_output"
+        loading "$balance_output" 0
+        loading "SUCCESS" 0
         exit 0
     fi
 done
