@@ -2,16 +2,12 @@
 
 set -a
 source ./node.env
+source ./utils.sh
 set +a
 
 if [ -z "$1" ]; then
     echo "Invalid CHAIN-ID"
     exit 1
-fi
-
-SED_IN_PLACE="sed -i"
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    SED_IN_PLACE="sed -i ''"
 fi
 
 MONIKER="$1"
@@ -44,38 +40,38 @@ BOND_DENOM="acudos"
 cudos-noded init $MONIKER --chain-id=$CHAIN_ID  --home=$CUDOS_HOME
 
 # gas price
-$SED_IN_PLACE "s/minimum-gas-prices = \"\"/minimum-gas-prices = \"5000000000000${BOND_DENOM}\"/" "${CUDOS_HOME}/config/app.toml"
+sed_in_place "s/minimum-gas-prices = \"\"/minimum-gas-prices = \"5000000000000${BOND_DENOM}\"/" "${CUDOS_HOME}/config/app.toml"
 
 # port 1317
 # enable
-$SED_IN_PLACE "/\[api\]/,/\[/ s/enable = false/enable = true/" "${CUDOS_HOME}/config/app.toml"
-$SED_IN_PLACE "s/enabled-unsafe-cors = false/enabled-unsafe-cors = true/" "${CUDOS_HOME}/config/app.toml"
+sed_in_place "/\[api\]/,/\[/ s/enable = false/enable = true/" "${CUDOS_HOME}/config/app.toml"
+sed_in_place "s/enabled-unsafe-cors = false/enabled-unsafe-cors = true/" "${CUDOS_HOME}/config/app.toml"
 
 # port 9090
 # enable
-$SED_IN_PLACE "/\[grpc\]/,/\[/ s/enable = false/enable = true/" "${CUDOS_HOME}/config/app.toml"
+sed_in_place "/\[grpc\]/,/\[/ s/enable = false/enable = true/" "${CUDOS_HOME}/config/app.toml"
 
 # port 26657
 # enable
-$SED_IN_PLACE "s/laddr = \"tcp:\/\/127.0.0.1:26657\"/laddr = \"tcp:\/\/0.0.0.0:26657\"/" "${CUDOS_HOME}/config/config.toml"
-$SED_IN_PLACE "s/cors_allowed_origins = \[\]/cors_allowed_origins = \[\"\*\"\]/" "${CUDOS_HOME}/config/config.toml"
+sed_in_place "s/laddr = \"tcp:\/\/127.0.0.1:26657\"/laddr = \"tcp:\/\/0.0.0.0:26657\"/" "${CUDOS_HOME}/config/config.toml"
+sed_in_place "s/cors_allowed_origins = \[\]/cors_allowed_origins = \[\"\*\"\]/" "${CUDOS_HOME}/config/config.toml"
 
 # port 26660
 if [ "${MONITORING_ENABLED}" = "true" ]; then
-    $SED_IN_PLACE "s/prometheus = .*/prometheus = true/g" "${CUDOS_HOME}/config/config.toml"
+    sed_in_place "s/prometheus = .*/prometheus = true/g" "${CUDOS_HOME}/config/config.toml"
 fi
 if [ "${MONITORING_ENABLED}" = "false" ]; then
-    $SED_IN_PLACE "s/prometheus = .*/prometheus = false/g" "${CUDOS_HOME}/config/config.toml"
+    sed_in_place "s/prometheus = .*/prometheus = false/g" "${CUDOS_HOME}/config/config.toml"
 fi
 
-$SED_IN_PLACE "s/pex = true/pex = false/" "${CUDOS_HOME}/config/config.toml"
+sed_in_place "s/pex = true/pex = false/" "${CUDOS_HOME}/config/config.toml"
 
 if [ "${ADDR_BOOK_STRICT}" = "false" ]; then
-    $SED_IN_PLACE "s/addr_book_strict = true/addr_book_strict = false/g" "${CUDOS_HOME}/config/config.toml"
+    sed_in_place "s/addr_book_strict = true/addr_book_strict = false/g" "${CUDOS_HOME}/config/config.toml"
 fi
 
 MY_OWN_PEER_ID=$(cudos-noded tendermint show-node-id --home=$CUDOS_HOME)
-$SED_IN_PLACE "s/private_peer_ids = \"\"/private_peer_ids = \"$MY_OWN_PEER_ID\"/g" "${CUDOS_HOME}/config/config.toml"
+sed_in_place "s/private_peer_ids = \"\"/private_peer_ids = \"$MY_OWN_PEER_ID\"/g" "${CUDOS_HOME}/config/config.toml"
 
 # consensus params
 genesisJson=$(jq ".consensus_params.evidence.max_age_num_blocks = \"531692\"" "${CUDOS_HOME}/config/genesis.json")
