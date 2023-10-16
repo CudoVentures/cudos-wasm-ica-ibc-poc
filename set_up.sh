@@ -1,47 +1,23 @@
 #!/bin/bash -e
 
 # ENV
-SED_IN_PLACE="sed -i"
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    SED_IN_PLACE="sed -i ''"
-fi
 SETUP_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-CONFIG_DIR=$SETUP_DIR/config
+CONFIG_DIR="$SETUP_DIR/config"
 AVG_BLOCK_TIME=8
-CONTRACT_PATH=$SETUP_DIR/artifacts/cudos_wasm_ica_ibc_poc.wasm
+CONTRACT_PATH="$SETUP_DIR/artifacts/cudos_wasm_ica_ibc_poc.wasm"
 TEST_BRANCH="cudos-dev-cosmos-v0.47.3"
-ROOT_INSTALL_PATH=$SETUP_DIR/tmp
-LOG_DIRECTORY=$ROOT_INSTALL_PATH/logs
-LOG_FILE=$LOG_DIRECTORY/log.file
-NODE_INSTALL_PATH=$ROOT_INSTALL_PATH/node
-NODE_ENV=$CONFIG_DIR/node.env
-RELAYER_ENV=$CONFIG_DIR/relayer.env
-RELAYER_CONFIG=$CONFIG_DIR/relayer-config.toml
+ROOT_INSTALL_PATH="$SETUP_DIR/tmp"
+LOG_DIRECTORY="$ROOT_INSTALL_PATH/logs"
+LOG_FILE="$LOG_DIRECTORY/log.file"
+NODE_INSTALL_PATH="$ROOT_INSTALL_PATH/node"
+NODE_ENV="$CONFIG_DIR/node.env"
+RELAYER_ENV="$CONFIG_DIR/relayer.env"
+CHAIN_INIT="$CONFIG_DIR/init-chain.sh"
+RELAYER_CONFIG="$CONFIG_DIR/relayer-config.toml"
 TX_FEES="1000000000000000000acudos"
 
-function loading() {
-    local message="$1"
-    local total_seconds="$2"
-    echo -ne "\033[32m$message\033[0m"
-    for (( i=0; i<total_seconds; i++ )); do
-        echo -n "."
-        sleep 1
-    done
-    echo ""
-}
-
-function info() {
-    local message="$1"
-    echo -ne "\033[34m$message\033[0m"
-    echo ""
-    sleep $AVG_BLOCK_TIME
-}
-
-function error() {
-    local message="$1"
-    echo -ne "\033[31m$message\033[0m"
-    echo ""
-}
+UTILS="$CONFIG_DIR/utils.sh"
+source $UTILS
 
 # Define Contract Interactions
 CONTRACT_STATE_QUERY='{"get_contract_state": {}}'
@@ -65,8 +41,9 @@ cp $NODE_ENV.example $NODE_ENV
 # SET UP A & B CHAINS
 git clone -b $TEST_BRANCH https://github.com/CudoVentures/cudos-node.git $NODE_INSTALL_PATH
 mkdir $LOG_DIRECTORY
-cp "$SETUP_DIR/config/init-chain.sh" $NODE_INSTALL_PATH/
-cp "$SETUP_DIR/config/node.env" $NODE_INSTALL_PATH/
+cp "$CHAIN_INIT" $NODE_INSTALL_PATH/
+cp "$NODE_ENV" $NODE_INSTALL_PATH/
+cp "$UTILS" $NODE_INSTALL_PATH/
 cd $NODE_INSTALL_PATH
 make install
 
@@ -122,12 +99,13 @@ cudos-noded tx wasm instantiate 1 '{}' \
 info "Initiating Relayer"
 result=($(echo "$(cudos-noded q wasm list-contracts-by-creator \
     $INSTANTIATOR_ADDR \
-    --node=$CHAIN_A_NODE)" | tr ',' '\n'))
+    --node=$CHAIN_A_NODE \
+    --home=$CHAIN_A_HOME)" | tr ',' '\n'))
 CONTRACT_ADDRESS=$(echo "${result[2]}")
 CHAIN_A_RELAYER_PORT=$(echo "wasm.${CONTRACT_ADDRESS}")
-$SED_IN_PLACE 's|CHAIN_ID_0=""|CHAIN_ID_0='\""${CHAIN_A_ID}\""'|g' $RELAYER_ENV
-$SED_IN_PLACE 's|CHAIN_0_PORT_ADDR=""|CHAIN_0_PORT_ADDR='\""${CHAIN_A_RELAYER_PORT}\""'|g' $RELAYER_ENV
-$SED_IN_PLACE 's|CHAIN_ID_1=""|CHAIN_ID_1='\""${CHAIN_B_ID}\""'|g' $RELAYER_ENV
+sed_in_place 's|CHAIN_ID_0=""|CHAIN_ID_0='\""${CHAIN_A_ID}\""'|g' $RELAYER_ENV
+sed_in_place 's|CHAIN_0_PORT_ADDR=""|CHAIN_0_PORT_ADDR='\""${CHAIN_A_RELAYER_PORT}\""'|g' $RELAYER_ENV
+sed_in_place 's|CHAIN_ID_1=""|CHAIN_ID_1='\""${CHAIN_B_ID}\""'|g' $RELAYER_ENV
 
 cd $CONFIG_DIR
 chmod +x ./init-relayer.sh
@@ -180,7 +158,7 @@ cudos-noded q bank balances \
 
 AMOUNT_TO_SEND="100"
 DENOM_TO_SEND="acudos"
-info "Trigerring IBC/ICA interaction by sending $AMOUNT_TO_SEND$DENOM_TO_SEND to $NEW_ACCOUNT_ADDR on $$CHAIN_B_ID"
+info "Trigerring IBC/ICA interaction by sending $AMOUNT_TO_SEND$DENOM_TO_SEND to $NEW_ACCOUNT_ADDR on $CHAIN_B_ID"
 cudos-noded tx wasm execute \
     "$CONTRACT_ADDRESS" \
      "$(CONTRACT_ICA_BANK_SEND_TX "$AMOUNT_TO_SEND" "$DENOM_TO_SEND" "$NEW_ACCOUNT_ADDR")" \
@@ -198,7 +176,7 @@ SUCCESS=false
 HERMES_PID=$CONFIG_DIR/hermes.pid
 HERMES_CONFIG="$CONFIG_DIR/relayer-config.toml"
 while [[ $RETRIES -lt $MAX_RETRIES && $SUCCESS == false ]]; do
-    loading "Checking $NEW_ACCOUNT_NAME:$NEW_ACCOUNT_ADDR new balance on: $CHAIN_B_ID" $(($AVG_BLOCK_TIME * $MAX_RETRIES))
+    loading "Checking $NEW_ACCOUNT_NAME:$NEW_ACCOUNT_ADDR new balance on: $CHAIN_B_ID" $AVG_BLOCK_TIME
     balance_output=$(cudos-noded q bank balances "$NEW_ACCOUNT_ADDR" --node=$CHAIN_B_NODE --home=$CHAIN_B_HOME)
     if echo "$balance_output" | grep "balances:" | awk '{print $2}' | grep -q '^\[\]$'; then
         error "$NEW_ACCOUNT_ADDR balance is empty"
